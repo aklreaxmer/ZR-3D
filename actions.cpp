@@ -282,33 +282,6 @@ void moveToWaypoint(float target[3], float waypoint[3]) {
 
 }
 
-void moveToShadowZone() {
-
-    //update this
-    api.getMyZRState(ourState); 
-
-    if (ourState[0] >= 0.0f && ourState[1] <= -0.2f) {
-        
-        float waypoint[3];
-        waypoint[0] = 0.0f;
-        waypoint[1] = -0.4f;
-        waypoint[2] = 0.0f;  
-
-        moveToWaypoint(waypoint, shadowCenter); 
-
-     } else if (ourState[0] >= 0.0f && ourState[1] >= 0.2f) {
-
-       float waypoint[3];
-       waypoint[0] = 0.0f;
-       waypoint[1] = 0.4f; 
-       waypoint[2] = 0.0f; 
-        
-       moveToWaypoint(waypoint, shadowCenter); 
-     } else {  //easy /Q1 or Q2
-        stopAtFastest(shadowCenter);
-     }
-}
-
 /*
  * The satellite’s angular velocity must start at less than 2.3°/s.
  * Rotate the satellite >90° along about the Z axis for 2D. 
@@ -342,6 +315,81 @@ void spinForMemoryPack(float memoryPackPos[]) {
             api.setAttRateTarget(rVel);  
         }
 }
+
+void moveToShadowZone() {
+
+    //this needs to be global, and init it in init()
+    float shadowPos[3]; 
+    //init that with the right position, and account for red or blue side
+
+    //update this
+    api.getMyZRState(ourState); 
+
+    if (!needsWaypoint())
+        stopAtFastest(shadowPos); 
+    else {
+
+        float waypoint[3]; 
+        findWaypoint[waypoint]; 
+
+        moveToWaypoint(shadowPos, waypoint);
+    }
+}
+void findWaypoint(float waypoint[]) {
+
+    //update this
+    game.getMyZRState(ourState); 
+
+    //TODO: ireallyneedtolearnmoremath
+
+}
+
+bool needsWaypoint() {
+    float ourPos[3]; 
+    ourPos[0] = ourState[0]; 
+    ourPos[1] = ourState[1]; 
+    ourPos[2] = ourState[2]; 
+
+    float centerOfAsteroid[3]; 
+    centerOfAsteroid[0] = 0; 
+    centerOfAsteroid[1] = 0;
+    centerOfAsteroid[2] = 0;
+
+    float distance = getDistBetweenLineAndPoint(centerOfAsteroid, ourPos, shadowPos); 
+
+    //rad of ast = .2
+    //rad of danger zone = .25
+    //rad of sph = .11
+    //zoom for error = .1
+    return distance < (.2 + .25 + .11 + .1)
+}
+
+float getDistBetweenLineAndPoint(float indPoint[], float pt1OnLine[], float pt2OnLine[]) {
+
+    //---first, find the vector from pt1 and pt2---//
+    float vector[]; 
+    vector[0] = pt1OnLine[0] - pt2OnLine[0]; 
+    vector[1] = pt1OnLine[1] - pt2OnLine[1]; 
+    vector[2] = pt1OnLine[2] - pt2OnLine[2]; 
+
+    //---now find the mag of that vector---//
+    float magnitute = dist(pt1OnLine, pt2OnLine);
+
+    //---Direction vector of line---//
+    float unitVector[]; 
+    unitVector[0] = vector[0]/magnitute;
+    unitVector[1] = vector[1]/magnitute; 
+    unitVector[2] = vector[2]/magnitute;  
+
+    //---dot product unitVector * vector---//
+    float dotProduct = (unitVector[0] * vector[0] +
+                        unitVector[1] * vector[1] + 
+                        unitVector[2] * vector[2] ); 
+
+    //---find and return distance---// 
+    return sqrtf((powf(magnitute, 2) - powf(dotProduct, 2))); 
+}
+
 
 void lookAtPOIFromZone(int zoneID) {
 
