@@ -1,40 +1,98 @@
- float opponentState[12];
-float destination[3];
-float myPos[3]; 
-float myVel[3];
-float spot[3]; //where to be for pic
-float direction[3]; //direction to point for pic
-float zeroPOI[3]; 
-float onePOI[3];
-float twoPOI[3];
-float currPOI[3]; //POI desired at moment
-float uZone[3];
-float myState[12];
-float target[3];
+float   opponentState[12];
+float   destination[3];
+float   myPos[3]; 
+float   myVel[3];
+float   spot[3]; //where to be for pic
+float   direction[3]; //direction to point for pic
+float   zeroPOI[3]; 
+float   onePOI[3];
+float   twoPOI[3];
+float   currPOI[3]; //POI desired at moment
+float   uZone[3];
+float   myState[12];
+float   destination[3];
 
-float innerZone, outerZone, uploadZone; 
+float   innerZone, outerZone, uploadZone; 
 
-int picCount, poiID;
-int outerTime;
-int blastTime, time;
+int     picCount, poiID;
+int     outerTime;
+int     blastTime, time;
 
-bool isOff;
+bool    isOff;
 
-bool    firstTime;              //is it first time calling mvt fn for this destination?
-bool    areWeThereYet;          //have you arrived at the target location yet?
-float    forces[3];              //the forces to be applied to this call of the function
-float    initPos[3];             //the position of the sphere in the first call of the fn
-float    halfPos[3];             //the position halfway between initpos and the destination
-float    travelledVector[3];     //the vector from initpos to the sphere this call of the fn
-float    halfwayVector[3];       //the vector from initpos to halfpos
-float    targetVector[3];        //the vector from initpos to the destination
+bool    firstTime;
+bool    areWeThereYet;
+bool    firstTimeWp;
 
+float   MAX_ACCEL_ONE_AXIS;
+float   forces[3];
+float   initPos[3];
+float   initVel[3];
+float   myAcc[3];
+float   myForce[3];
+float   prevVel[3];
+float   ourState[13];
+float   travelledVector[3];
+float   wpToTar[3];
+float   initToWp[3];
+float   currToWp[3];
+float   maxVelPerpTar[3];
+float   maxVelParTar[3];
+float   myVelPerpTar[3];
+float   myVelParTar[3];
+float   myAccPerpTar[3];
+float   myAccParTar[3];
+float   dirParTar[3];
+float   myForcePerpTar[3];
+float   myForceParTar[3];
+float   dblMyForcePerpTar[3];
+float   dblMyForceParTar[3];
+float   switchPerpPos[3];
+float   switchParPos[3];
+float   switchPerpVector[3];
+float   switchParVector[3]; 
+float   switchVectorAway[3];
+float   predictedVelWp[3];
+float   xProdMyVelWpToTar[3];
+float   xProdMyAccWpToTar[3];
+float   xProdMyForceWpToTar[3];
+float   goalAccPerpTar[3];
+float   predictedSpeedWpPerp;
+float   predictedSpeedWpPar;
+float   xProdPredVelWpToTar[3];
+float   mySpeed;
+float   mySpeedPerpTar;
+float   mySpeedParTar;
+float   myAccMagPerpTar;
+float   myAccMagParTar;
+float   myForceMagPerpTar;
+float   myForceMagParTar;
+float   maxSpeedParTar;
+float   maxSpeedPerpTar;
+float   maxAccOneComp;
 
 void init() 
 {
-	target[0] = 0.3f;
-    target[1] = 0.4f;
-    target[2] = 0.3f;
+    MAX_ACCEL_ONE_AXIS = 0.05f / 4.3f;
+
+    firstTime = true;
+    areWeThereYet = false;
+    firstTimeWp = true;
+
+    for(int i = 0; i < 13; i++)
+    {
+        if(i < 3)
+        {
+            myVel[i] = 0.0f;
+            initVel[i] = 0.0f;
+            myPos[i] = 0.0f;
+        }
+        ourState[i] = 0.0f;
+    }
+
+	destination[0] = 0.3f;
+    destination[1] = 0.4f;
+    destination[2] = 0.3f;
     
     picCount = 0;
     
@@ -114,11 +172,11 @@ void loop()
 
 void moveTo(float x, float y, float z)
 {
-    target[0] = x;
-    target[1] = y;
-    target[2] = z;
+    destination[0] = x;
+    destination[1] = y;
+    destination[2] = z;
     
-    stopAtFastest(target);
+    stopAtFastest(destination);
 
 }
 
@@ -230,11 +288,11 @@ void scalarMultiple(float vector[], float scalar, int size)
         vector[i] = scalar*vector[i];
 }
 
-void stopAtFastest(float target[3])
+void stopAtFastest(float destination[3])
 {
     if(areWeThereYet)
     {
-        api.setPositionTarget(target);
+        api.setPositionTarget(destination);
         return;
     }
         
@@ -243,11 +301,11 @@ void stopAtFastest(float target[3])
         for(int i = 0; i < 3; i++)
         {
             initPos[i] = myPos[i];
-            halfPos[i] = (target[i] - myPos[i])/2 + myPos[i];
+            halfPos[i] = (destination[i] - myPos[i])/2 + myPos[i];
         }
             
 
-        mathVecSubtract(targetVector, target, initPos, 3);
+        mathVecSubtract(targetVector, destination, initPos, 3);
         mathVecSubtract(halfwayVector, halfPos, initPos, 3);
     
         for(int i = 0; i < 3; i++)
@@ -265,7 +323,7 @@ void stopAtFastest(float target[3])
         {
             if(fabsf(mathVecMagnitude(travelledVector, 3) - mathVecMagnitude(targetVector, 3)) < 0.1f)
             {
-                api.setPositionTarget(target);
+                api.setPositionTarget(destination);
                 firstTime = true;
                 areWeThereYet = true;
                 
